@@ -20,6 +20,11 @@ namespace TextEditor
         {
             InitializeComponent();
             this.FormClosing += Form1_FormClosing;
+
+            // Set up keyboard shortcuts in code:
+            cutToolStripMenuItem.ShortcutKeys = Keys.Control | Keys.X;
+            copyToolStripMenuItem.ShortcutKeys = Keys.Control | Keys.C;
+            pasteToolStripMenuItem.ShortcutKeys = Keys.Control | Keys.V;
         }
 
         private string currentFilePath = null;
@@ -40,18 +45,14 @@ namespace TextEditor
                 string filePath = ofd.FileName;
                 string fileContent = File.ReadAllText(filePath);
 
-                // 1) Unsubscribe so TextChanged won't fire
                 textBox1.TextChanged -= textBox1_TextChanged;
 
-                // 2) Bulk change
                 textBox1.Text = fileContent;
                 currentFilePath = filePath;
                 this.Text = $"TextEditor - {Path.GetFileName(filePath)}";
 
-                // 3) Reset dirty flag
                 isTextModified = false;
 
-                // 4) Resubscribe
                 textBox1.TextChanged += textBox1_TextChanged;
             }
         }
@@ -62,8 +63,8 @@ namespace TextEditor
             if (ConfirmExit())
             {
                 textBox1.Clear();
-                currentFilePath = null; // ✅ Reset file path
-                isTextModified = false; // ✅ Reset modified flag
+                currentFilePath = null; 
+                isTextModified = false; 
                 this.Text = "TextEditor - New File";
             }
         }
@@ -73,13 +74,11 @@ namespace TextEditor
         {
             if (!string.IsNullOrEmpty(currentFilePath))
             {
-                // Save directly to the existing file
                 File.WriteAllText(currentFilePath, textBox1.Text);
                 isTextModified = false;
             }
             else
             {
-                // First-time save, show SaveFileDialog
                 SaveFileDialog saveFileDialog = new SaveFileDialog();
                 saveFileDialog.Filter = "Text Files (*.txt)|*.txt|All Files (*.*)|*.*";
                 saveFileDialog.DefaultExt = "txt";
@@ -89,7 +88,7 @@ namespace TextEditor
                     currentFilePath = saveFileDialog.FileName;
                     File.WriteAllText(currentFilePath, textBox1.Text);
                     this.Text = $"TextEditor - {Path.GetFileName(currentFilePath)}";
-                    isTextModified = false; // ✅ move it here
+                    isTextModified = false; 
                 }
             }
         }
@@ -107,14 +106,13 @@ namespace TextEditor
         {
             if (e.Control && e.KeyCode == Keys.S)
             {
-                saveToolStripMenuItem_Click(sender, e); // Trigger save
-                e.SuppressKeyPress = true; // Prevent beep sound or duplicate behavior
+                saveToolStripMenuItem_Click(sender, e); 
+                e.SuppressKeyPress = true; 
             }
         }
         private void textBox1_TextChanged(object sender, EventArgs e)
         {
-            if (isInternalUpdate) return;
-            isTextModified = true;
+
         }
 
 
@@ -138,22 +136,35 @@ namespace TextEditor
                 {
                     return true;
                 }
-                else // Cancel
+                else 
                 {
                     return false;
                 }
             }
-            return true; // No unsaved changes, OK to exit
+            return true; 
         }
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
             if (!ConfirmExit())
             {
-                e.Cancel = true; // Cancel the close
+                e.Cancel = true; ,
             }
         }
 
+        private void cutToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            textBox1.Cut();
+        }
 
+        private void copyToolStripMenuItem_Click_1(object sender, EventArgs e)
+        {
+            textBox1.Copy();
+        }
+
+        private void pasteToolStripMenuItem_Click_1(object sender, EventArgs e)
+        {
+            textBox1.Paste();
+        }
     }
 }
