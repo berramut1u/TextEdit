@@ -19,30 +19,55 @@ namespace TextEditor
         public Form1()
         {
             InitializeComponent();
+            this.FormClosing += Form1_FormClosing;
         }
 
         private string currentFilePath = null;
+        private bool isTextModified = false;
+        private bool isInternalUpdate = false;
+
+
 
         private void openToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            OpenFileDialog openFileDialog = new OpenFileDialog();
-            openFileDialog.Filter = "Text Files (*.txt)|*.txt|All Files (*.*)|*.*";
-
-            if (openFileDialog.ShowDialog() == DialogResult.OK)
+            var ofd = new OpenFileDialog()
             {
-                string filePath = openFileDialog.FileName;
+                Filter = "Text Files (*.txt)|*.txt|All Files (*.*)|*.*"
+            };
+
+            if (ofd.ShowDialog() == DialogResult.OK)
+            {
+                string filePath = ofd.FileName;
                 string fileContent = File.ReadAllText(filePath);
+
+                // 1) Unsubscribe so TextChanged won't fire
+                textBox1.TextChanged -= textBox1_TextChanged;
+
+                // 2) Bulk change
                 textBox1.Text = fileContent;
-                currentFilePath = filePath; // Save the path
+                currentFilePath = filePath;
                 this.Text = $"TextEditor - {Path.GetFileName(filePath)}";
+
+                // 3) Reset dirty flag
+                isTextModified = false;
+
+                // 4) Resubscribe
+                textBox1.TextChanged += textBox1_TextChanged;
             }
         }
 
+
         private void newToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            textBox1.Clear();
-            this.Text = "TextEditor - New File";
+            if (ConfirmExit())
+            {
+                textBox1.Clear();
+                currentFilePath = null; // ✅ Reset file path
+                isTextModified = false; // ✅ Reset modified flag
+                this.Text = "TextEditor - New File";
+            }
         }
+
 
         private void saveToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -50,6 +75,7 @@ namespace TextEditor
             {
                 // Save directly to the existing file
                 File.WriteAllText(currentFilePath, textBox1.Text);
+                isTextModified = false;
             }
             else
             {
@@ -63,13 +89,18 @@ namespace TextEditor
                     currentFilePath = saveFileDialog.FileName;
                     File.WriteAllText(currentFilePath, textBox1.Text);
                     this.Text = $"TextEditor - {Path.GetFileName(currentFilePath)}";
+                    isTextModified = false; // ✅ move it here
                 }
             }
         }
 
+
         private void exitToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Application.Exit();
+            if (ConfirmExit())
+            {
+                Application.Exit();
+            }
         }
 
         private void textBox1_KeyDown(object sender, KeyEventArgs e)
@@ -80,5 +111,49 @@ namespace TextEditor
                 e.SuppressKeyPress = true; // Prevent beep sound or duplicate behavior
             }
         }
+        private void textBox1_TextChanged(object sender, EventArgs e)
+        {
+            if (isInternalUpdate) return;
+            isTextModified = true;
+        }
+
+
+        private bool ConfirmExit()
+        {
+            if (isTextModified)
+            {
+                var result = MessageBox.Show(
+                    "Do you want to save changes before exiting?",
+                    "Unsaved Changes",
+                    MessageBoxButtons.YesNoCancel,
+                    MessageBoxIcon.Warning
+                );
+
+                if (result == DialogResult.Yes)
+                {
+                    saveToolStripMenuItem_Click(this, EventArgs.Empty);
+                    return true;
+                }
+                else if (result == DialogResult.No)
+                {
+                    return true;
+                }
+                else // Cancel
+                {
+                    return false;
+                }
+            }
+            return true; // No unsaved changes, OK to exit
+        }
+
+        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            if (!ConfirmExit())
+            {
+                e.Cancel = true; // Cancel the close
+            }
+        }
+
+
     }
 }
